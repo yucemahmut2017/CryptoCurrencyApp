@@ -9,7 +9,9 @@ import com.mryuce.cryptocurrencyapp.R
 import com.mryuce.cryptocurrencyapp.adapter.RecyclerViewAdapter
 import com.mryuce.cryptocurrencyapp.model.CryptoModel
 import com.mryuce.cryptocurrencyapp.service.CryptoAPI
+import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_main.*
 import retrofit2.Call
 import retrofit2.Callback
@@ -27,6 +29,9 @@ class MainActivity : AppCompatActivity(),RecyclerViewAdapter.Listener{
 
     private var recyclerViewAdapter:RecyclerViewAdapter?=null
 
+    private var compositeDisposable:CompositeDisposable?=null
+
+
 
 
 
@@ -42,6 +47,7 @@ class MainActivity : AppCompatActivity(),RecyclerViewAdapter.Listener{
         reycyclerView.layoutManager=layoutManager
 
 
+        compositeDisposable= CompositeDisposable()
 
         loadData()
 
@@ -50,38 +56,27 @@ class MainActivity : AppCompatActivity(),RecyclerViewAdapter.Listener{
     private fun loadData(){
         val retrofit=Retrofit.Builder().baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        val service=retrofit.create(CryptoAPI::class.java)
-        val call =service.getData()
-        call.enqueue(object:Callback<List<CryptoModel>>{
-            override fun onResponse(
-                call: Call<List<CryptoModel>>,
-                response: Response<List<CryptoModel>>
-            ) {
-                if(response.isSuccessful){
-                    response.body()?.let {
-                        cryptoModels=ArrayList(it)
+            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+            .build().create(CryptoAPI::class.java)
 
-                        cryptoModels?.let {
-                            recyclerViewAdapter= RecyclerViewAdapter(it,this@MainActivity)
-                            reycyclerView.adapter=recyclerViewAdapter
+        compositeDisposable?.add(retrofit.getData()
+            .subscribeOn(Schedulers.io())//arka planda dinliyor
+            .observeOn(AndroidSchedulers.mainThread())//mainthread te işliyor
+            .subscribe(this::handleResponse))//handleResponse aktar
 
-
-
-                        }
-
-                    }
-                }
-            }
-
-            override fun onFailure(call: Call<List<CryptoModel>>, t: Throwable) {
-                t.printStackTrace()
-            }
-
-        })
     }
-
+    private fun handleResponse(cryptoList: List<CryptoModel>){
+        cryptoModels=ArrayList(cryptoList)
+        cryptoModels?.let {
+            recyclerViewAdapter= RecyclerViewAdapter(it,this)
+            reycyclerView.adapter=recyclerViewAdapter
+        }}
     override fun onItemClick(cryptoModel: CryptoModel) {
         Toast.makeText(this,"clicked : ${cryptoModel.currency}",Toast.LENGTH_LONG).show()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        compositeDisposable?.clear()
     }
 }
