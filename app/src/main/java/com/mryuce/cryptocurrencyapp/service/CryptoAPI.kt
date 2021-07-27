@@ -1,14 +1,14 @@
 package com.mryuce.cryptocurrencyapp.service
 
+
 import com.mryuce.cryptocurrencyapp.model.CryptoModel
 import retrofit2.Call
 import retrofit2.http.GET
+import javax.security.auth.callback.Callback
 
 interface CryptoAPI {
 
-    //https://api.nomics.com/v1
-    //prices?key=b47b5e10dda54ccfe9b70b3ea654aaf06d03820f"
-    @GET("prices?key=b47b5e10dda54ccfe9b70b3ea654aaf06d03820f")
+    @GET("prices?key=yourNomicsKey")
     fun getData():Call<List<CryptoModel>>
 
 }

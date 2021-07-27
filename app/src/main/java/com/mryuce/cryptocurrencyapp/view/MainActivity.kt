@@ -9,11 +9,13 @@ import com.mryuce.cryptocurrencyapp.R
 import com.mryuce.cryptocurrencyapp.adapter.RecyclerViewAdapter
 import com.mryuce.cryptocurrencyapp.model.CryptoModel
 import com.mryuce.cryptocurrencyapp.service.CryptoAPI
+import io.reactivex.disposables.CompositeDisposable
 import kotlinx.android.synthetic.main.activity_main.*
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
+import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
 
 import kotlin.collections.ArrayList
@@ -35,9 +37,7 @@ class MainActivity : AppCompatActivity(),RecyclerViewAdapter.Listener{
         setContentView(R.layout.activity_main)
 
 
-        //https://raw.githubusercontent.com/atilsamancioglu/K21-JSONDataSet/master/crypto.json
-        //https://api.nomics.com/v1/prices?key=2187154b76945f2373394aa34f7dc98a
-        //2187154b76945f2373394aa34f7dc98a
+
         val layoutManager:RecyclerView.LayoutManager=LinearLayoutManager(this)
         reycyclerView.layoutManager=layoutManager
 
@@ -53,11 +53,11 @@ class MainActivity : AppCompatActivity(),RecyclerViewAdapter.Listener{
             .build()
         val service=retrofit.create(CryptoAPI::class.java)
         val call =service.getData()
-         call.enqueue(object:Callback<List<CryptoModel>>{
-             override fun onResponse(
-                 call: Call<List<CryptoModel>>,
-                 response: Response<List<CryptoModel>>
-             ) {
+        call.enqueue(object:Callback<List<CryptoModel>>{
+            override fun onResponse(
+                call: Call<List<CryptoModel>>,
+                response: Response<List<CryptoModel>>
+            ) {
                 if(response.isSuccessful){
                     response.body()?.let {
                         cryptoModels=ArrayList(it)
@@ -72,16 +72,16 @@ class MainActivity : AppCompatActivity(),RecyclerViewAdapter.Listener{
 
                     }
                 }
-             }
+            }
 
-             override fun onFailure(call: Call<List<CryptoModel>>, t: Throwable) {
-           t.printStackTrace()
-             }
+            override fun onFailure(call: Call<List<CryptoModel>>, t: Throwable) {
+                t.printStackTrace()
+            }
 
-         })
+        })
     }
 
     override fun onItemClick(cryptoModel: CryptoModel) {
-       Toast.makeText(this,"clicked : ${cryptoModel.currency}",Toast.LENGTH_LONG).show()
+        Toast.makeText(this,"clicked : ${cryptoModel.currency}",Toast.LENGTH_LONG).show()
     }
 }
