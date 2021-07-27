@@ -9,13 +9,11 @@ import com.mryuce.cryptocurrencyapp.R
 import com.mryuce.cryptocurrencyapp.adapter.RecyclerViewAdapter
 import com.mryuce.cryptocurrencyapp.model.CryptoModel
 import com.mryuce.cryptocurrencyapp.service.CryptoAPI
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.schedulers.Schedulers
+
 import kotlinx.android.synthetic.main.activity_main.*
-import retrofit2.Call
-import retrofit2.Callback
+import kotlinx.coroutines.*
 import retrofit2.Response
+
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
@@ -29,7 +27,11 @@ class MainActivity : AppCompatActivity(),RecyclerViewAdapter.Listener{
 
     private var recyclerViewAdapter:RecyclerViewAdapter?=null
 
-    private var compositeDisposable:CompositeDisposable?=null
+    private var job: Job?=null
+
+
+    val exceptionHandler = CoroutineExceptionHandler { coroutineContext, throwable ->
+        println("Error: ${throwable.localizedMessage}")}
 
 
 
@@ -47,24 +49,36 @@ class MainActivity : AppCompatActivity(),RecyclerViewAdapter.Listener{
         reycyclerView.layoutManager=layoutManager
 
 
-        compositeDisposable= CompositeDisposable()
+
 
         loadData()
 
 
     }
-    private fun loadData(){
-        val retrofit=Retrofit.Builder().baseUrl(BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-            .build().create(CryptoAPI::class.java)
+    private fun loadData() {
 
-        compositeDisposable?.add(retrofit.getData()
-            .subscribeOn(Schedulers.io())//arka planda dinliyor
-            .observeOn(AndroidSchedulers.mainThread())//mainthread te işliyor
-            .subscribe(this::handleResponse))//handleResponse aktar
+        val retrofit = Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CryptoAPI::class.java)
+
+        job = CoroutineScope(Dispatchers.IO + exceptionHandler).launch {
+            val response = retrofit.getData()
+
+            withContext(Dispatchers.Main){
+                if(response.isSuccessful) {
+                    response.body()?.let {
+                        handleResponse(it)
+                    }
+                }
+            }
+        }
+
+
 
     }
+
     private fun handleResponse(cryptoList: List<CryptoModel>){
         cryptoModels=ArrayList(cryptoList)
         cryptoModels?.let {
@@ -77,6 +91,7 @@ class MainActivity : AppCompatActivity(),RecyclerViewAdapter.Listener{
 
     override fun onDestroy() {
         super.onDestroy()
-        compositeDisposable?.clear()
+        job?.cancel()
+
     }
 }
